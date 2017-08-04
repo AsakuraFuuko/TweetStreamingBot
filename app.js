@@ -74,7 +74,7 @@ tgbot.getMe().then(async (msg) => {
             let pics = [];
             log(`${user_name}(@${user_tid})\n${text}`);
 
-            if (!retweeted_status && !is_reply) {
+            if (!retweeted_status && !is_reply && medias) {
                 let msg_id = -1;
                 if (medias && medias.length > 0) {
                     medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
@@ -94,7 +94,7 @@ tgbot.getMe().then(async (msg) => {
                 if (msg_id !== -1) {
                     options.reply_to_message_id = msg_id;
                 }
-                if (!text.includes('https://t.co/') && pics.length === 1) {
+                if (!text.includes('https://t.co/') || (text.includes('https://t.co/') && pics.length === 1)) {
                     options.disable_web_page_preview = true;
                 }
                 await tgbot.sendMessage(chat_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="http://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options);
