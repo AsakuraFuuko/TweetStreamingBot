@@ -91,7 +91,7 @@ tgbot.getMe().then(async (msg) => {
                 if (msg_id !== -1) {
                     options.reply_to_message_id = msg_id;
                 }
-                if (!text.includes('https://t.co/')) {
+                if (!text.includes('https://t.co/') && pics.length === 1) {
                     options.disable_web_page_preview = true;
                 }
                 await tgbot.sendMessage(chat_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="http://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options);
