@@ -6,6 +6,7 @@ const Twitter = require('twitter');
 const crontab = require('node-crontab');
 
 const Utils = require('./lib/utils');
+const log = require('./lib/logger');
 
 let isLocal = process.env.LOCAL === 'true';
 debug('isLocal =', isLocal);
@@ -71,6 +72,8 @@ tgbot.getMe().then(async (msg) => {
             let medias = tweet.entities.media;
             let ext_medias = !!tweet_id.extended_entities && tweet_id.extended_entities.media;
             let pics = [];
+            log(`${user_name}(@${user_tid})\n${text}`);
+
             if (!retweeted_status && !is_reply) {
                 let msg_id = -1;
                 if (medias && medias.length > 0) {
@@ -86,7 +89,7 @@ tgbot.getMe().then(async (msg) => {
                         await tgbot.sendPhoto(chat_id, pic, options).then((msg) => msg_id = msg.message_id);
                     }
                 }
-                debug(`${user_name}(@${user_tid})\n${text}`);
+
                 let options = {parse_mode: 'HTML'};
                 if (msg_id !== -1) {
                     options.reply_to_message_id = msg_id;
