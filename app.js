@@ -69,15 +69,21 @@ tgbot.getMe().then(async (msg) => {
             let is_reply = tweet.in_reply_to_screen_name !== null;
             let text = tweet.text;
             let medias = tweet.entities.media;
-            if (!retweeted_status && !is_reply && !!medias) {
+            let ext_medias = !!tweet_id.extended_entities && tweet_id.extended_entities.media;
+            let pics = [];
+            if (!retweeted_status && !is_reply) {
                 let msg_id = -1;
-                if (medias.length > 0) {
-                    debug(JSON.stringify(medias));
-                    for (let media of medias) {
-                        if (media.type === 'photo') {
-                            msg_id = await tgbot.sendPhoto(chat_id, media.media_url_https);
-                            msg_id = msg_id.message_id;
+                if (medias && medias.length > 0) {
+                    medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                    if (ext_medias) {
+                        ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                    }
+                    for (let pic of pics) {
+                        let options = {};
+                        if (msg_id !== -1) {
+                            options.reply_to_message_id = msg_id;
                         }
+                        await tgbot.sendPhoto(chat_id, pic, options).then((msg) => msg_id = msg.message_id);
                     }
                 }
                 debug(`${user_name}(@${user_tid})\n${text}`);
