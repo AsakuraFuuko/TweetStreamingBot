@@ -71,7 +71,7 @@ tgbot.getMe().then(async (msg) => {
             let medias = tweet.entities.media;
             if (!retweeted_status && !is_reply && !!medias) {
                 let msg_id = -1;
-                if (medias.length > 1) {
+                if (medias.length > 0) {
                     debug(JSON.stringify(medias));
                     for (let media of medias) {
                         if (media.type === 'photo') {
