@@ -10,7 +10,7 @@ const log = require('./lib/logger');
 let isLocal = process.env.LOCAL === 'true';
 debug('isLocal =', isLocal);
 
-let TOKEN = process.env.TELEGRAM_TOKEN_TEST;
+let TOKEN = process.env.TELEGRAM_TOKEN;
 let options = {
     webHook: {
         port: process.env.PORT || 5000
