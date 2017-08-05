@@ -89,6 +89,7 @@ async function streaming() {
             if (medias && medias.length > 0) {
                 medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
                 if (ext_medias) {
+                    pics.length = 0;
                     ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
                 }
                 for (let pic of pics) {
