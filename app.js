@@ -57,65 +57,71 @@ tgbot.getMe().then((msg) => {
 });
 
 async function streaming() {
-    if (!!stream) {
-        stream.destroy();
-    }
-
-    let members = Utils.LoadJSON('members.json');
-    if (!members || members.length === 0) {
-        members = await client.get('lists/members', {slug: list, owner_screen_name: twitter_id, count: 5000});
-        if (members.users) {
-            members = members.users.map((user) => user.id);
-            Utils.SaveJSON('members.json', members)
+    try {
+        if (!!stream) {
+            stream.destroy();
         }
-    }
 
-    stream = client.stream('statuses/filter', {follow: members.join(',')});
+        let members = Utils.LoadJSON('members.json');
+        if (!members || members.length === 0) {
+            members = await client.get('lists/members', {slug: list, owner_screen_name: twitter_id, count: 5000});
+            if (members.users) {
+                members = members.users.map((user) => user.id);
+                Utils.SaveJSON('members.json', members)
+            }
+        }
 
-    stream.on('data', async (tweet) => {
-        let tweet_id = tweet.id_str;
-        let user_name = tweet.user.name;
-        let user_tid = tweet.user.screen_name;
-        let is_retweeted = !!tweet.retweeted_status && tweet.retweeted_status.id !== tweet.id;
-        let is_reply = tweet.in_reply_to_screen_name !== null;
-        let text = tweet.text;
-        let medias = tweet.entities.media;
-        let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
-        let pics = [];
-        log(`${user_name}(@${user_tid})\n${text}`);
+        stream = client.stream('statuses/filter', {follow: members.join(',')});
 
-        if (!is_retweeted && !is_reply && medias) {
-            let msg_id = -1;
-            if (medias && medias.length > 0) {
-                medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
-                if (ext_medias) {
-                    pics.length = 0;
-                    ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
-                }
-                for (let pic of pics) {
-                    let options = {};
-                    if (msg_id !== -1) {
-                        options.reply_to_message_id = msg_id;
+        stream.on('data', async (tweet) => {
+            let tweet_id = tweet.id_str;
+            let user_name = tweet.user.name;
+            let user_tid = tweet.user.screen_name;
+            let is_retweeted = !!tweet.retweeted_status && tweet.retweeted_status.id !== tweet.id;
+            let is_reply = tweet.in_reply_to_screen_name !== null;
+            let text = tweet.text;
+            let medias = tweet.entities.media;
+            let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
+            let pics = [];
+            log(`${user_name}(@${user_tid})\n${text}`);
+
+            if (!is_retweeted && !is_reply && medias) {
+                let msg_id = -1;
+                if (medias && medias.length > 0) {
+                    medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                    if (ext_medias) {
+                        pics.length = 0;
+                        ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
                     }
-                    await tgbot.sendPhoto(chat_id, pic, options).then((msg) => msg_id = msg.message_id);
+                    for (let pic of pics) {
+                        let options = {};
+                        if (msg_id !== -1) {
+                            options.reply_to_message_id = msg_id;
+                        }
+                        await tgbot.sendPhoto(chat_id, pic, options).then((msg) => msg_id = msg.message_id);
+                    }
                 }
-            }
 
-            let options = {parse_mode: 'HTML'};
-            if (msg_id !== -1) {
-                options.reply_to_message_id = msg_id;
+                let options = {parse_mode: 'HTML'};
+                if (msg_id !== -1) {
+                    options.reply_to_message_id = msg_id;
+                }
+                if (!text.includes('https://t.co/') || (text.includes('https://t.co/') && pics.length === 1)) {
+                    options.disable_web_page_preview = true;
+                }
+                await tgbot.sendMessage(chat_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="http://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options);
             }
-            if (!text.includes('https://t.co/') || (text.includes('https://t.co/') && pics.length === 1)) {
-                options.disable_web_page_preview = true;
-            }
-            await tgbot.sendMessage(chat_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="http://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options);
+        });
+
+        stream.on('error', (error) => {
+            console.error(error);
+        });
+    } catch (err) {
+        console.error(err);
+        if (err.length > 0 && err[0].code === 34) {
+            process.exit(1);
         }
-    });
-
-    stream.on('error', (error) => {
-        console.error(error);
-        process.exit(1)
-    });
+    }
 }
 
 // reset at 00:00 every day
