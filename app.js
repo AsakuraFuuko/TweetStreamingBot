@@ -125,7 +125,7 @@ crontab.scheduleJob('0 0 * * *', () => {
 
 process.on('unhandledRejection', (reason) => {
     console.error(reason);
-    //   process.exit(1);
+    process.exit(1);
 });
 
 require('heroku-self-ping')(url, {interval: 25 * 60 * 1000});
