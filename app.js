@@ -14,7 +14,7 @@ let OAuthsDB = new (require('./lib/db/mongo/oauths'))();
 let isLocal = process.env.LOCAL === 'true';
 let tw_clients = {};
 
-let TOKEN = process.env.TELEGRAM_TOKEN_TEST;
+let TOKEN = process.env.TELEGRAM_TOKEN;
 let PORT = process.env.PORT || 5000;
 let URL = process.env.APP_URL;
 
