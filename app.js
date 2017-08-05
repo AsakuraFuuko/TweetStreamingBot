@@ -80,7 +80,7 @@ async function streaming() {
         let is_reply = tweet.in_reply_to_screen_name !== null;
         let text = tweet.text;
         let medias = tweet.entities.media;
-        let ext_medias = !!tweet_id.extended_entities && tweet_id.extended_entities.media;
+        let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
         let pics = [];
         log(`${user_name}(@${user_tid})\n${text}`);
 
