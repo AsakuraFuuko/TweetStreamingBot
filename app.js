@@ -63,8 +63,8 @@ app.get('/twitter/callback', async (req, res) => {
             console.log(obj);
             if (!!obj) {
                 OAuthsDB.setUserTokens(tg_user_id, obj);
-                tgbot.sendMessage(tg_user_id, `success authorized`);
-                res.send('success authorized, close this page');
+                tgbot.sendMessage(tg_user_id, `Success authorized`);
+                res.send('Success authorized, close this page.');
                 let _ = createStreamingClient(tg_user_id, obj);
             } else {
                 res.sendStatus(401)
@@ -115,7 +115,7 @@ tgbot.getMe().then((msg) => {
         let org_msg_id = msg.message_id;
         let chat_id = msg.chat.id;
         let from_id = msg.from.id;
-        return tgbot.sendMessage(chat_id, `open this url to authorize\n\n${URL}/twitter?tg_user_id=${from_id}`, {
+        return tgbot.sendMessage(chat_id, `Open this URL for authorization.\n\n${URL}/twitter?tg_user_id=${from_id}`, {
             reply_to_message_id: org_msg_id
         })
     });
@@ -134,11 +134,11 @@ tgbot.getMe().then((msg) => {
                 delete tw_clients[from_id];
                 log(`remove client(${from_id}) from list`);
             }
-            return tgbot.sendMessage(chat_id, `success unauthorized`, {
+            return tgbot.sendMessage(chat_id, `Success unauthorized`, {
                 reply_to_message_id: org_msg_id
             })
         } else {
-            return tgbot.sendMessage(chat_id, `maybe not authorized`, {
+            return tgbot.sendMessage(chat_id, `Maybe not authorized`, {
                 reply_to_message_id: org_msg_id
             })
         }
