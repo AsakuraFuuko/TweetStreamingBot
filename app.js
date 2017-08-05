@@ -5,13 +5,12 @@ const fs = require('fs');
 const Twitter = require('twitter');
 const crontab = require('node-crontab');
 
-const Utils = require('./lib/utils');
 const log = require('./lib/logger');
 
 let isLocal = process.env.LOCAL === 'true';
 debug('isLocal =', isLocal);
 
-let TOKEN = process.env.TELEGRAM_TOKEN;
+let TOKEN = process.env.TELEGRAM_TOKEN_TEST;
 let options = {
     webHook: {
         port: process.env.PORT || 5000
@@ -27,7 +26,7 @@ if (isLocal) {
 let botname = '@bot_name';
 let url = process.env.APP_URL;
 const tgbot = new TelegramBot(TOKEN, options);
-let list = process.env.TWITTER_LIST, twitter_id = process.env.TWITTER_ID, chat_id = process.env.OWNER_ID;
+let chat_id = process.env.OWNER_ID;
 
 if (isLocal) {
     tgbot.setWebHook(`${url}/bot${TOKEN}`, {
@@ -62,74 +61,58 @@ async function streaming() {
             stream.destroy();
         }
 
-        let members = Utils.LoadJSON('members.json');
-        if (!members || members.length === 0) {
-            members = await client.get('lists/members', {slug: list, owner_screen_name: twitter_id, count: 5000});
-            if (members.users) {
-                members = members.users.map((user) => user.id);
-                Utils.SaveJSON('members.json', members)
-            }
-        }
+        stream = client.stream('user', {with: 'followings'});
 
-        if (members.length > 0) {
-            stream = client.stream('statuses/filter', {follow: members.join(',')});
+        stream.on('data', async (tweet) => {
+            let tweet_id = tweet.id_str;
+            let user_name = tweet.user.name;
+            let user_tid = tweet.user.screen_name;
+            let is_reply = tweet.in_reply_to_screen_name !== null;
+            let text = tweet.text;
+            let medias = tweet.entities.media;
+            let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
+            let pics = [];
+            if (!is_reply && medias) {
+                log(`${user_name}(@${user_tid})\n${text}`);
 
-            stream.on('data', async (tweet) => {
-                let tweet_id = tweet.id_str;
-                let user_name = tweet.user.name;
-                let user_tid = tweet.user.screen_name;
-                let is_retweeted = !!tweet.retweeted_status && !members.includes(tweet.id);
-                let is_reply = tweet.in_reply_to_screen_name !== null;
-                let text = tweet.text;
-                let medias = tweet.entities.media;
-                let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
-                let pics = [];
-                if (!is_retweeted && !is_reply && medias) {
-                    log(`${user_name}(@${user_tid})\n${text}`);
-
-                    let msg_id = -1;
-                    if (medias && medias.length > 0) {
-                        medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
-                        if (ext_medias) {
-                            pics.length = 0;
-                            ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                let msg_id = -1;
+                if (medias && medias.length > 0) {
+                    medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                    if (ext_medias) {
+                        pics.length = 0;
+                        ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                    }
+                    for (let pic of pics) {
+                        let options = {};
+                        if (msg_id !== -1) {
+                            options.reply_to_message_id = msg_id;
                         }
-                        for (let pic of pics) {
-                            let options = {};
-                            if (msg_id !== -1) {
-                                options.reply_to_message_id = msg_id;
-                            }
-                            await tgbot.sendPhoto(chat_id, pic, options).then((msg) => msg_id = msg.message_id);
-                        }
+                        await tgbot.sendPhoto(chat_id, pic, options).then((msg) => msg_id = msg.message_id);
                     }
-
-                    let options = {parse_mode: 'HTML'};
-                    if (msg_id !== -1) {
-                        options.reply_to_message_id = msg_id;
-                    }
-                    if (!text.includes('https://t.co/') || (text.includes('https://t.co/') && pics.length === 1)) {
-                        options.disable_web_page_preview = true;
-                    }
-                    await tgbot.sendMessage(chat_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="http://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options);
                 }
-            });
 
-            stream.on('error', (error) => {
-                console.error(error);
-            });
-        } else {
-            throw new Error('no members')
-        }
+                let options = {parse_mode: 'HTML'};
+                if (msg_id !== -1) {
+                    options.reply_to_message_id = msg_id;
+                }
+                if (!text.includes('https://t.co/') || (text.includes('https://t.co/') && pics.length === 1)) {
+                    options.disable_web_page_preview = true;
+                }
+                await tgbot.sendMessage(chat_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="http://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options);
+            }
+        });
+
+        stream.on('error', (error) => {
+            console.error(error);
+        });
     } catch (err) {
         console.error(err);
-        Utils.SaveJSON('members.json', []);
         let _ = streaming();
     }
 }
 
 // reset at 00:00 every day
 crontab.scheduleJob('0 0 * * *', () => {
-    Utils.SaveJSON('members.json', []);
     let _ = streaming();
 });
 
