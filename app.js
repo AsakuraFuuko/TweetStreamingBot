@@ -76,7 +76,7 @@ async function streaming() {
         let tweet_id = tweet.id_str;
         let user_name = tweet.user.name;
         let user_tid = tweet.user.screen_name;
-        let retweeted_status = tweet.retweeted_status;
+        let is_retweeted = !!tweet.retweeted_status && tweet.retweeted_status.id !== tweet.id;
         let is_reply = tweet.in_reply_to_screen_name !== null;
         let text = tweet.text;
         let medias = tweet.entities.media;
@@ -84,7 +84,7 @@ async function streaming() {
         let pics = [];
         log(`${user_name}(@${user_tid})\n${text}`);
 
-        if (!retweeted_status && !is_reply && medias) {
+        if (!is_retweeted && !is_reply && medias) {
             let msg_id = -1;
             if (medias && medias.length > 0) {
                 medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
