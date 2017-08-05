@@ -25,32 +25,16 @@
       "description": "local test",
       "value": "false"
     },
+    "DATABASE_URL": {
+      "description": "mongodb url",
+      "value": ""
+    },
     "TWITTER_CONSUMER_KEY": {
       "description": "twitter consumer key",
       "value": ""
     },
     "TWITTER_CONSUMER_SECRET": {
       "description": "twitter consumer secret",
-      "value": ""
-    },
-    "TWITTER_ACCESS_TOKEN_KEY": {
-      "description": "twitter access token key",
-      "value": ""
-    },
-    "TWITTER_ACCESS_TOKEN_SECRET": {
-      "description": "twitter access token secret",
-      "value": ""
-    },
-    "OWNER_ID": {
-      "description": "telegram owner id",
-      "value": ""
-    },
-    "TWITTER_ID": {
-      "description": "twitter list form id",
-      "value": ""
-    },
-    "TWITTER_LIST": {
-      "description": "twitter list",
       "value": ""
     }
   }

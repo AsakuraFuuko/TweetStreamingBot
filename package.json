@@ -22,8 +22,10 @@
   },
   "main": "app.js",
   "dependencies": {
+    "body-parser": "^1.17.2",
     "dateformat": "^2.0.0",
     "debug": "^2.6.8",
+    "express": "^4.15.3",
     "heroku-self-ping": "^1.1.3",
     "log": "^1.4.0",
     "mongodb": "^2.2.30",
