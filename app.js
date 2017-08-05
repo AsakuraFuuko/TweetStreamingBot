@@ -107,6 +107,10 @@ if (isLocal) {
 tgbot.getMe().then((msg) => {
     botname = '@' + msg.username;
 
+    tgbot.getWebHookInfo().then((res) => {
+        debug(JSON.stringify(res))
+    });
+
     tgbot.onText(/\/auth/, (msg, match) => {
         let org_msg_id = msg.message_id;
         let chat_id = msg.chat.id;
@@ -120,13 +124,15 @@ tgbot.getMe().then((msg) => {
         let org_msg_id = msg.message_id;
         let chat_id = msg.chat.id;
         let from_id = msg.from.id;
-        let removed = await OAuthsDB.deleteOAuth(from_id);
-        if (removed) {
+        let has = await OAuthsDB.getUserTokens(from_id);
+        if (has) {
+            await OAuthsDB.deleteOAuth(from_id);
             let user = tw_clients[from_id];
             if (!!user) {
                 let {stream} = user;
                 stream.destroy();
                 delete tw_clients[from_id];
+                log(`remove client(${from_id}) from list`);
             }
             return tgbot.sendMessage(chat_id, `success unauthorized`, {
                 reply_to_message_id: org_msg_id
