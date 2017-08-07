@@ -181,7 +181,7 @@ async function createStreamingClient(tg_user_id, tokens) {
             let tweet_id = tweet.id_str;
             let user_name = tweet.user.name;
             let user_tid = tweet.user.screen_name;
-            let is_retweeted = !!tweet.retweeted_status && tweet.retweeted_status.id !== tweet.id;
+            let is_retweeted = !!tweet.retweeted_status && tweet.retweeted_status.user.id !== tweet.user.id;
             let is_reply = tweet.in_reply_to_screen_name !== null;
             let text = tweet.text;
             let medias = tweet.entities.media;
