@@ -11,6 +11,7 @@ const log = require('./lib/logger');
 const LoginWithTwitter = require('./lib/twitteroauth');
 
 let OAuthsDB = new (require('./lib/db/mongo/oauths'))();
+let UsersDB = new (require('./lib/db/mongo/users'))();
 let isLocal = process.env.LOCAL === 'true';
 let tw_clients = {};
 
@@ -143,6 +144,24 @@ tgbot.getMe().then((msg) => {
             })
         }
     });
+
+    tgbot.onText(/\/retweeted/, async (msg, match) => {
+        let org_msg_id = msg.message_id;
+        let chat_id = msg.chat.id;
+        let from_id = msg.from.id;
+        let retweeted = UsersDB.getUserSetting(from_id, 'show_retweeted');
+        if (retweeted) {
+            await UsersDB.setUserSetting(from_id, 'show_retweeted', false);
+            return tgbot.sendMessage(chat_id, `disabled forward retweeted`, {
+                reply_to_message_id: org_msg_id
+            })
+        } else {
+            await UsersDB.setUserSetting(from_id, 'show_retweeted', true);
+            return tgbot.sendMessage(chat_id, `enabled forward rewteeted`, {
+                reply_to_message_id: org_msg_id
+            })
+        }
+    });
 });
 // telegram
 
@@ -181,7 +200,8 @@ async function createStreamingClient(tg_user_id, tokens) {
             let tweet_id = tweet.id_str;
             let user_name = tweet.user.name;
             let user_tid = tweet.user.screen_name;
-            let is_retweeted = !!tweet.retweeted_status && tweet.retweeted_status.user.id !== tweet.user.id;
+            let user_show_retweeted = await UsersDB.getUserSetting(tg_user_id, 'show_retweeted');
+            let is_retweeted = !!tweet.retweeted_status && tweet.retweeted_status.user.id !== tweet.user.id && !user_show_retweeted;
             let is_reply = tweet.in_reply_to_screen_name !== null;
             let text = tweet.text;
             let medias = tweet.entities.media;
