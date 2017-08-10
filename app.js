@@ -149,7 +149,7 @@ tgbot.getMe().then((msg) => {
         let org_msg_id = msg.message_id;
         let chat_id = msg.chat.id;
         let from_id = msg.from.id;
-        let retweeted = UsersDB.getUserSetting(from_id, 'show_retweeted');
+        let retweeted = await UsersDB.getUserSetting(from_id, 'show_retweeted');
         if (!!retweeted) {
             await UsersDB.setUserSetting(from_id, 'show_retweeted', false);
             return tgbot.sendMessage(chat_id, `disabled forward retweeted`, {
