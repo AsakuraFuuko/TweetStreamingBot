@@ -174,7 +174,7 @@ async function loop() {
         let {user_id, userTokens} = user;
         await createStreamingClient(user_id, userTokens);
     }
-    _ = tweetFavLoop();
+    // _ = tweetFavLoop();
 }
 
 async function createStreamingClient(tg_user_id, tokens) {
@@ -324,12 +324,12 @@ const tweetFavLoop = async function () {
                                 });
                                 msg_ids.push(msg.message_id)
                             }
+                            await TweetsDB.addTweet(tweet_id, msg_ids)
                         } else {
                             log(`[nomedia] https://twitter.com/${user_tid}/status/${tweet_id}`);
                             // let msg = await tgbot.sendMessage(tgChannelId, `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`);
                             // msg_ids.push(msg.message_id)
                         }
-                        await TweetsDB.addTweet(tweet_id, msg_ids)
                     } else {
                         log(`[exists] https://twitter.com/${user_tid}/status/${tweet_id}`);
                     }
@@ -349,5 +349,5 @@ const tweetFavLoop = async function () {
         _ = request_tweets(client, -1);
     }
 };
-setInterval(tweetFavLoop, 60 * 60 * 1000); // 1 hours
+// setInterval(tweetFavLoop, 60 * 60 * 1000); // 1 hours
 // twitter fav
