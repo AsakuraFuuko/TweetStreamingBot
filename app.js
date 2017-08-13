@@ -7,6 +7,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const https = require('https');
 const Heroku = require('heroku-client');
+const request = require('request');
 
 const log = require('./lib/logger');
 const LoginWithTwitter = require('./lib/twitteroauth');
@@ -231,7 +232,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                         if (msg_id !== -1) {
                             options.reply_to_message_id = msg_id;
                         }
-                        await tgbot.sendPhoto(tg_user_id, pic, options).then((msg) => msg_id = msg.message_id);
+                        await tgbot.sendPhoto(tg_user_id, request(pic), options).then((msg) => msg_id = msg.message_id);
                     }
                 }
 
@@ -318,7 +319,7 @@ const tweetFavLoop = async function () {
                                 ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
                             }
                             for (let pic of pics) {
-                                let msg = await tgbot.sendPhoto(tgChannelId, pic, {
+                                let msg = await tgbot.sendPhoto(tgChannelId, request(pic), {
                                     caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
                                 });
                                 msg_ids.push(msg.message_id)
