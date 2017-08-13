@@ -13,6 +13,7 @@ const LoginWithTwitter = require('./lib/twitteroauth');
 
 let OAuthsDB = new (require('./lib/db/mongo/oauths'))();
 let UsersDB = new (require('./lib/db/mongo/users'))();
+let TweetsDB = new (require('./lib/db/mongo/tweets'))();
 let isLocal = process.env.LOCAL === 'true';
 let tw_clients = {};
 
@@ -172,6 +173,7 @@ async function loop() {
         let {user_id, userTokens} = user;
         await createStreamingClient(user_id, userTokens);
     }
+    _ = tweetFavLoop();
 }
 
 async function createStreamingClient(tg_user_id, tokens) {
@@ -240,7 +242,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                 if (!text.includes('https://t.co/') || (text.includes('https://t.co/') && pics.length === 1)) {
                     options.disable_web_page_preview = true;
                 }
-                await tgbot.sendMessage(tg_user_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="http://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options);
+                await tgbot.sendMessage(tg_user_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="https://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options);
             }
         });
 
@@ -277,3 +279,74 @@ crontab.scheduleJob('0 0 * * *', () => {
         log(app)
     });
 });
+
+// twitter fav
+let tweetFavUserId = process.env.TG_USER_ID || -1;
+let tgChannelId = process.env.TG_CHANNEL_ID || '';
+if (!tgChannelId.startsWith('@')) {
+    tgChannelId = '@' + tgChannelId;
+}
+let inLoop = false;
+const tweetFavLoop = async function () {
+    if (inLoop) return;
+    let tw_client = tw_clients[tweetFavUserId];
+    if (!!tw_client) {
+        let client = tw_client.client;
+        let request_tweets = async (client, last) => {
+            let last_tweet_id = -1;
+            try {
+                let options = {count: 200};
+                if (last !== -1) {
+                    options.max_id = last
+                }
+                let tweets = await client.get('favorites/list', options);
+                for (let tweet of tweets) {
+                    let tweet_id = tweet.id_str;
+                    let user_name = tweet.user.name;
+                    let user_tid = tweet.user.screen_name;
+                    let medias = tweet.entities.media;
+                    let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
+                    let pics = [];
+                    let msg_ids = [];
+                    let has_tweet = await TweetsDB.hasTweet(tweet_id);
+                    if (!has_tweet) {
+                        if (medias && medias.length > 0) {
+                            log(`fetch https://twitter.com/${user_tid}/status/${tweet_id}`);
+                            medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                            if (ext_medias) {
+                                pics.length = 0;
+                                ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                            }
+                            for (let pic of pics) {
+                                let msg = await tgbot.sendPhoto(tgChannelId, pic, {
+                                    caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
+                                });
+                                msg_ids.push(msg.message_id)
+                            }
+                        } else {
+                            log(`[nomedia] https://twitter.com/${user_tid}/status/${tweet_id}`);
+                            let msg = await tgbot.sendMessage(tgChannelId, `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`)
+                            msg_ids.push(msg.message_id)
+                        }
+                        await TweetsDB.addTweet(tweet_id, msg_ids)
+                    } else {
+                        log(`[exists] https://twitter.com/${user_tid}/status/${tweet_id}`);
+                    }
+                    last_tweet_id = tweet_id;
+                }
+
+                if (last_tweet_id !== -1) {
+                    _ = request_tweets(client, last_tweet_id);
+                } else {
+                    log("fetch over")
+                }
+            } catch (err) {
+                console.log(err);
+                log('fetch error stop')
+            }
+        };
+        _ = request_tweets(client, -1);
+    }
+};
+setInterval(tweetFavLoop, 60 * 60 * 1000); // 1 hours
+// twitter fav
