@@ -321,7 +321,7 @@ const tweetFavLoop = async function () {
                                 ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https + ':large'));
                             }
                         } else {
-                            let body = await requestPromise(`https://twitter.com/${user_tid}/status/${tweet_id}`, {proxy: 'http://127.0.0.1:9090'});
+                            let body = await requestPromise(`https://twitter.com/${user_tid}/status/${tweet_id}`);
                             if (body) {
                                 let $ = cheerio.load(body);
                                 let photos = $('div.AdaptiveMedia-photoContainer');
