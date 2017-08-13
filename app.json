@@ -36,6 +36,14 @@
     "TWITTER_CONSUMER_SECRET": {
       "description": "twitter consumer secret",
       "value": ""
+    },
+    "HEROKU_API_TOKEN": {
+      "description": "heroku api token",
+      "value": ""
+    },
+    "HEROKU_APP_NAME": {
+      "description": "heroku app name",
+      "value": ""
     }
   }
 }
