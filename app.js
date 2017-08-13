@@ -336,7 +336,7 @@ const tweetFavLoop = async function () {
                     last_tweet_id = tweet_id;
                 }
 
-                if (last_tweet_id !== -1) {
+                if (last_tweet_id !== -1 && tweets.length !== 1) {
                     _ = request_tweets(client, last_tweet_id);
                 } else {
                     log("fetch over")
