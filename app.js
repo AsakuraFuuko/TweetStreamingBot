@@ -296,7 +296,7 @@ const tweetFavLoop = async function () {
         let request_tweets = async (client, last) => {
             let last_tweet_id = -1;
             try {
-                let options = {count: 200};
+                let options = {count: 200, include_entities: true};
                 if (last !== -1) {
                     options.max_id = last
                 }
@@ -326,8 +326,8 @@ const tweetFavLoop = async function () {
                             }
                         } else {
                             log(`[nomedia] https://twitter.com/${user_tid}/status/${tweet_id}`);
-                            let msg = await tgbot.sendMessage(tgChannelId, `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`)
-                            msg_ids.push(msg.message_id)
+                            // let msg = await tgbot.sendMessage(tgChannelId, `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`);
+                            // msg_ids.push(msg.message_id)
                         }
                         await TweetsDB.addTweet(tweet_id, msg_ids)
                     } else {
