@@ -23,6 +23,7 @@
   "main": "app.js",
   "dependencies": {
     "body-parser": "^1.17.2",
+    "cheerio": "^1.0.0-rc.2",
     "dateformat": "^2.0.0",
     "debug": "^2.6.8",
     "express": "^4.15.3",
@@ -36,6 +37,7 @@
     "node-telegram-bot-api": "github:yagop/node-telegram-bot-api#master",
     "request": "^2.81.0",
     "request-promise": "^4.2.1",
+    "request-promise-native": "^1.0.4",
     "twitter": "^1.7.1"
   }
 }

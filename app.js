@@ -8,6 +8,8 @@ const bodyParser = require('body-parser');
 const https = require('https');
 const Heroku = require('heroku-client');
 const request = require('request');
+const requestPromise = require('request-promise-native');
+const cheerio = require('cheerio');
 
 const log = require('./lib/logger');
 const LoginWithTwitter = require('./lib/twitteroauth');
@@ -174,7 +176,7 @@ async function loop() {
         let {user_id, userTokens} = user;
         await createStreamingClient(user_id, userTokens);
     }
-    // _ = tweetFavLoop();
+    _ = tweetFavLoop();
 }
 
 async function createStreamingClient(tg_user_id, tokens) {
@@ -313,11 +315,20 @@ const tweetFavLoop = async function () {
                     if (!has_tweet) {
                         if (medias && medias.length > 0) {
                             log(`fetch https://twitter.com/${user_tid}/status/${tweet_id}`);
-                            medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                            medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https + ':large'));
                             if (ext_medias) {
                                 pics.length = 0;
-                                ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
+                                ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https + ':large'));
                             }
+                        } else {
+                            let body = await requestPromise(`https://twitter.com/${user_tid}/status/${tweet_id}`, {proxy: 'http://127.0.0.1:9090'});
+                            if (body) {
+                                let $ = cheerio.load(body);
+                                let photos = $('div.AdaptiveMedia-photoContainer');
+                                photos.map((i) => pics.push(photos.eq(i).attr('data-image-url') + ':large'));
+                            }
+                        }
+                        if (pics.length > 0) {
                             for (let pic of pics) {
                                 let msg = await tgbot.sendPhoto(tgChannelId, request(pic), {
                                     caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
@@ -327,8 +338,6 @@ const tweetFavLoop = async function () {
                             await TweetsDB.addTweet(tweet_id, msg_ids)
                         } else {
                             log(`[nomedia] https://twitter.com/${user_tid}/status/${tweet_id}`);
-                            // let msg = await tgbot.sendMessage(tgChannelId, `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`);
-                            // msg_ids.push(msg.message_id)
                         }
                     } else {
                         log(`[exists] https://twitter.com/${user_tid}/status/${tweet_id}`);
