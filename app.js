@@ -358,5 +358,5 @@ const tweetFavLoop = async function () {
         _ = request_tweets(client, -1);
     }
 };
-// setInterval(tweetFavLoop, 60 * 60 * 1000); // 1 hours
+setInterval(tweetFavLoop, 60 * 60 * 1000); // 1 hours
 // twitter fav
