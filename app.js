@@ -196,6 +196,8 @@ tgbot.getMe().then((msg) => {
                                     {text: '❤️ 已收藏', callback_data: `u�${args[1]}�${args[2]}`},
                                 ]
                             ]
+                        }, {
+                            message_id: opts.msg_id
                         });
                     }).catch((err) => console.error(err))
                 }
@@ -208,6 +210,8 @@ tgbot.getMe().then((msg) => {
                                     {text: '❤️ 收藏', callback_data: `l�${args[1]}�${args[2]}`},
                                 ]
                             ]
+                        }, {
+                            message_id: opts.msg_id
                         });
                     }).catch((err) => console.error(err))
                 }
