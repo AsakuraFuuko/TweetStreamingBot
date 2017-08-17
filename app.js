@@ -167,7 +167,41 @@ tgbot.getMe().then((msg) => {
             })
         }
     });
+
+    tgbot.on('callback_query', (callbackQuery) => {
+        const action = callbackQuery.data;
+        const msg = callbackQuery.message;
+        const opts = {
+            user_id: callbackQuery.from.id,
+            chat_id: msg.chat.id,
+            msg_id: msg.message_id,
+            callback_id: callbackQuery.id,
+            chat_type: msg.chat.type
+        };
+        if (msg.reply_to_message) {
+            opts.org_msg_id = msg.reply_to_message.message_id
+        }
+        let tw_client = tw_clients[parseInt(args[1])];
+        if (!!tw_client) {
+            let client = tw_client.client;
+            let args = action.split('�');
+            switch (args[0]) {
+                case 'l': {
+                    // favorites/create
+                    return client.post('favorites/create', {id: args[2]}).then((tweet) => {
+                        log(`like ${tweet.id}`)
+                    }).catch((err) => console.error(err))
+                }
+                case 'u': {
+                    return client.post('favorites/destroy', {id: args[2]}).then((tweet) => {
+                        log(`unlike ${tweet.id}`)
+                    }).catch((err) => console.error(err))
+                }
+            }
+        }
+    });
 });
+
 // telegram
 
 async function loop() {
@@ -216,6 +250,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                 );
             let is_reply = tweet.in_reply_to_screen_name !== null;
             let text = tweet.text;
+            let favorited = is_retweeted ? tweet.retweeted_status.favorited : tweet.favorited;
             let medias = tweet.entities.media;
             let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
             let pics = [];
@@ -234,7 +269,11 @@ async function createStreamingClient(tg_user_id, tokens) {
                         if (msg_id !== -1) {
                             options.reply_to_message_id = msg_id;
                         }
-                        await tgbot.sendPhoto(tg_user_id, request(pic), options).then((msg) => msg_id = msg.message_id);
+                        await tgbot.sendPhoto(tgChannelId, request(pic), {
+                            caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
+                        }).then((msg) => msg_id = msg.message_id).catch((err) => {
+                            console.error(err)
+                        })
                     }
                 }
 
@@ -245,7 +284,27 @@ async function createStreamingClient(tg_user_id, tokens) {
                 if (!text.includes('https://t.co/') || (text.includes('https://t.co/') && pics.length === 1)) {
                     options.disable_web_page_preview = true;
                 }
-                await tgbot.sendMessage(tg_user_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="https://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options);
+                let tw_id = is_retweeted ? tweet.retweeted_status.id : tweet.id;
+                if (!favorited) {
+                    options.reply_markup = {
+                        inline_keyboard: [
+                            [
+                                {text: '❤️ 收藏', callback_data: `l�${tg_user_id}�${tw_id}`},
+                            ]
+                        ]
+                    }
+                } else {
+                    options.reply_markup = {
+                        inline_keyboard: [
+                            [
+                                {text: '❤️ 已收藏', callback_data: `u�${tg_user_id}�${tw_id}`},
+                            ]
+                        ]
+                    }
+                }
+                await tgbot.sendMessage(tg_user_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="https://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options).catch((err) => {
+                    console.error(err)
+                })
             }
         });
 
@@ -330,10 +389,13 @@ const tweetFavLoop = async function () {
                         }
                         if (pics.length > 0) {
                             for (let pic of pics) {
-                                let msg = await tgbot.sendPhoto(tgChannelId, request(pic), {
+                                await tgbot.sendPhoto(tgChannelId, request(pic), {
                                     caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
-                                });
-                                msg_ids.push(msg.message_id)
+                                }).then((msg) => {
+                                    msg_ids.push(msg.message_id)
+                                }).catch((err) => {
+                                    console.error(err)
+                                })
                             }
                             await TweetsDB.addTweet(tweet_id, msg_ids)
                         } else {
