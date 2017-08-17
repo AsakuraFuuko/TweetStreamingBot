@@ -269,7 +269,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                         if (msg_id !== -1) {
                             options.reply_to_message_id = msg_id;
                         }
-                        await tgbot.sendPhoto(tgChannelId, request(pic), {
+                        await tgbot.sendPhoto(tg_user_id, request(pic), {
                             caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
                         }).then((msg) => msg_id = msg.message_id).catch((err) => {
                             console.error(err)
