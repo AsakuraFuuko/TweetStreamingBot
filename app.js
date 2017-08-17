@@ -197,6 +197,7 @@ tgbot.getMe().then((msg) => {
                                 ]
                             ]
                         }, {
+                            chat_id: opts.chat_id,
                             message_id: opts.msg_id
                         });
                     }).catch((err) => console.error(err))
@@ -211,6 +212,7 @@ tgbot.getMe().then((msg) => {
                                 ]
                             ]
                         }, {
+                            chat_id: opts.chat_id,
                             message_id: opts.msg_id
                         });
                     }).catch((err) => console.error(err))
