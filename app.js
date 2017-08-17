@@ -181,20 +181,34 @@ tgbot.getMe().then((msg) => {
         if (msg.reply_to_message) {
             opts.org_msg_id = msg.reply_to_message.message_id
         }
+        let args = action.split('�');
         let tw_client = tw_clients[parseInt(args[1])];
         if (!!tw_client) {
             let client = tw_client.client;
-            let args = action.split('�');
             switch (args[0]) {
                 case 'l': {
                     // favorites/create
                     return client.post('favorites/create', {id: args[2]}).then((tweet) => {
-                        log(`like ${tweet.id}`)
+                        log(`like ${tweet.id}`);
+                        return tgbot.editMessageReplyMarkup({
+                            inline_keyboard: [
+                                [
+                                    {text: '❤️ 已收藏', callback_data: `u�${args[1]}�${args[2]}`},
+                                ]
+                            ]
+                        });
                     }).catch((err) => console.error(err))
                 }
                 case 'u': {
                     return client.post('favorites/destroy', {id: args[2]}).then((tweet) => {
-                        log(`unlike ${tweet.id}`)
+                        log(`unlike ${tweet.id}`);
+                        return tgbot.editMessageReplyMarkup({
+                            inline_keyboard: [
+                                [
+                                    {text: '❤️ 收藏', callback_data: `l�${args[1]}�${args[2]}`},
+                                ]
+                            ]
+                        });
                     }).catch((err) => console.error(err))
                 }
             }
