@@ -298,7 +298,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                 if (!text.includes('https://t.co/') || (text.includes('https://t.co/') && pics.length === 1)) {
                     options.disable_web_page_preview = true;
                 }
-                let tw_id = is_retweeted ? tweet.retweeted_status.id : tweet.id;
+                let tw_id = is_retweeted ? tweet.retweeted_status.id_str : tweet.id_str;
                 if (!favorited) {
                     options.reply_markup = {
                         inline_keyboard: [
