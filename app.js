@@ -200,7 +200,21 @@ tgbot.getMe().then((msg) => {
                             chat_id: opts.chat_id,
                             message_id: opts.msg_id
                         });
-                    }).catch((err) => console.error(err))
+                    }).catch((err) => {
+                        console.error(err);
+                        if (err[0] && err[0].code === 139) {
+                            return tgbot.editMessageReplyMarkup({
+                                inline_keyboard: [
+                                    [
+                                        {text: '❤️ 已收藏', callback_data: `u�${args[1]}�${args[2]}`},
+                                    ]
+                                ]
+                            }, {
+                                chat_id: opts.chat_id,
+                                message_id: opts.msg_id
+                            });
+                        }
+                    })
                 }
                 case 'u': {
                     return client.post('favorites/destroy', {id: args[2]}).then((tweet) => {
@@ -215,7 +229,21 @@ tgbot.getMe().then((msg) => {
                             chat_id: opts.chat_id,
                             message_id: opts.msg_id
                         });
-                    }).catch((err) => console.error(err))
+                    }).catch((err) => {
+                        console.error(err);
+                        if (err[0] && err[0].code === 144) {
+                            return tgbot.editMessageReplyMarkup({
+                                inline_keyboard: [
+                                    [
+                                        {text: '❤️ 收藏', callback_data: `l�${args[1]}�${args[2]}`},
+                                    ]
+                                ]
+                            }, {
+                                chat_id: opts.chat_id,
+                                message_id: opts.msg_id
+                            });
+                        }
+                    })
                 }
             }
         }
