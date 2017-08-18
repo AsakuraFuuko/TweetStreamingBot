@@ -270,7 +270,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                 );
             let is_reply = tweet.in_reply_to_screen_name !== null;
             let text = tweet.text;
-            let favorited = is_retweeted ? tweet.retweeted_status.favorited : tweet.favorited;
+            let favorited = tweet.favorited;
             let medias = tweet.entities.media;
             let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
             let pics = [];
