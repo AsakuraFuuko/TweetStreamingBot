@@ -28,7 +28,7 @@ let URL = process.env.APP_URL;
 let tw_options = {
     consumerKey: process.env.TWITTER_CONSUMER_KEY,
     consumerSecret: process.env.TWITTER_CONSUMER_SECRET,
-    callbackUrl: `${URL}/twitter/callback`
+    callbackUrl: `${URL}/tweet/callback`
 };
 
 if (isLocal) {
@@ -48,7 +48,7 @@ app.post(`/bot${TOKEN}`, (req, res) => {
     res.sendStatus(200);
 });
 
-app.get('/twitter', (req, res) => {
+app.get('/tweet', (req, res) => {
     let {tg_user_id} = req.query;
     if (tg_user_id) {
         tw.login(tg_user_id, async (_, token, url) => {
@@ -61,13 +61,13 @@ app.get('/twitter', (req, res) => {
     }
 });
 
-app.get('/twitter/callback', async (req, res) => {
+app.get('/tweet/callback', async (req, res) => {
     let {tg_user_id} = req.query;
     let {tokenSecret} = await OAuthsDB.getTokenSecret(tg_user_id);
     if (tokenSecret) {
         tw.callback(req.query, tokenSecret, (_, obj) => {
             console.log(obj);
-            if (!!obj) {
+            if (!!obj && !!obj.userToken) {
                 OAuthsDB.setUserTokens(tg_user_id, obj);
                 tgbot.sendMessage(tg_user_id, `Success authorized`);
                 res.send('Success authorized, close this page.');
@@ -122,7 +122,7 @@ tgbot.getMe().then((msg) => {
         let org_msg_id = msg.message_id;
         let chat_id = msg.chat.id;
         let from_id = msg.from.id;
-        return tgbot.sendMessage(chat_id, `Open this URL for authorization.\n\n${URL}/twitter?tg_user_id=${from_id}`, {
+        return tgbot.sendMessage(chat_id, `Open this URL for authorization.\n\n${URL}/tweet?tg_user_id=${from_id}`, {
             reply_to_message_id: org_msg_id
         })
     });
