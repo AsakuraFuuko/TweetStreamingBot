@@ -112,6 +112,7 @@ if (isLocal) {
 
 tgbot.getMe().then((msg) => {
     botname = '@' + msg.username;
+    require('./lib/error')(tgbot, process.env.ERROR_CHANNEL);
 
     tgbot.getWebHookInfo().then((res) => {
         debug(JSON.stringify(res))
