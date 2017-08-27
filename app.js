@@ -330,7 +330,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                 if (msg_id !== -1) {
                     options.reply_to_message_id = msg_id;
                 }
-                if (!text.includes('https://t.co/') || (text.includes('https://t.co/') && pics.length === 1)) {
+                if (!text.includes('https://t.co/')) {
                     options.disable_web_page_preview = true;
                 }
                 let tw_id = is_retweeted ? tweet.retweeted_status.id_str : tweet.id_str;
