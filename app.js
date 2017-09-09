@@ -378,18 +378,18 @@ process.on('unhandledRejection', (reason) => {
 
 require('heroku-self-ping')(URL, {interval: 25 * 60 * 1000});
 
-let herokuApiToken = process.env.HEROKU_API_TOKEN;
-let herokuAppName = process.env.HEROKU_APP_NAME;
-
-const heroku = new Heroku({token: herokuApiToken});
-
-const crontab = require('node-crontab');
+// let herokuApiToken = process.env.HEROKU_API_TOKEN;
+// let herokuAppName = process.env.HEROKU_APP_NAME;
+//
+// const heroku = new Heroku({token: herokuApiToken});
+//
+// const crontab = require('node-crontab');
 // restart at 12:00 every day
-crontab.scheduleJob('0 12 * * *', () => {
-    heroku.delete(`/apps/${herokuAppName}/dynos`).then((app) => {
-        log(app)
-    });
-});
+// crontab.scheduleJob('0 12 * * *', () => {
+//     heroku.delete(`/apps/${herokuAppName}/dynos`).then((app) => {
+//         log(app)
+//     });
+// });
 
 // twitter fav
 let tweetFavUserId = process.env.TG_USER_ID || -1;
