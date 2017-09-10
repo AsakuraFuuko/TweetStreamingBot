@@ -2,11 +2,11 @@
 const debug = require('debug')('twitterstreamingbot');
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
-const Twitter = require('twitter');
+const Twitter = require('twit');
 const express = require('express');
 const bodyParser = require('body-parser');
 const https = require('https');
-const Heroku = require('heroku-client');
+// const Heroku = require('heroku-client');
 const request = require('request');
 const requestPromise = require('request-promise-native');
 const cheerio = require('cheerio');
@@ -102,13 +102,13 @@ if (isLocal) {
 }
 let botname = '@bot_name';
 const tgbot = new TelegramBot(TOKEN, tg_options);
-if (isLocal) {
-    tgbot.setWebHook(`${URL}/bot${TOKEN}`, {
-        certificate: `${__dirname}/cert.pem`,
-    });
-} else {
-    tgbot.setWebHook(`${URL}/bot${TOKEN}`);
-}
+// if (isLocal) {
+//     tgbot.setWebHook(`${URL}/bot${TOKEN}`, {
+//         certificate: `${__dirname}/cert.pem`,
+//     });
+// } else {
+let _ = tgbot.setWebHook(`${URL}/bot${TOKEN}`);
+// }
 
 tgbot.getMe().then((msg) => {
     botname = '@' + msg.username;
@@ -151,25 +151,61 @@ tgbot.getMe().then((msg) => {
         }
     });
 
-    tgbot.onText(/\/retweeted/, async (msg, match) => {
+    tgbot.onText(/\/retweeted_self/, async (msg, match) => {
         let org_msg_id = msg.message_id;
         let chat_id = msg.chat.id;
         let from_id = msg.from.id;
-        let retweeted = await UsersDB.getUserSetting(from_id, 'show_retweeted');
+        let retweeted = await UsersDB.getUserSetting(from_id, 'show_self_retweeted');
         if (!!retweeted) {
-            await UsersDB.setUserSetting(from_id, 'show_retweeted', false);
-            return tgbot.sendMessage(chat_id, `disabled forward retweeted`, {
+            await UsersDB.setUserSetting(from_id, 'show_self_retweeted', false);
+            return tgbot.sendMessage(chat_id, `disabled forward retweeted by self`, {
                 reply_to_message_id: org_msg_id
             })
         } else {
-            await UsersDB.setUserSetting(from_id, 'show_retweeted', true);
-            return tgbot.sendMessage(chat_id, `enabled forward rewteeted`, {
+            await UsersDB.setUserSetting(from_id, 'show_self_retweeted', true);
+            return tgbot.sendMessage(chat_id, `enabled forward rewteeted by self`, {
                 reply_to_message_id: org_msg_id
             })
         }
     });
 
-    tgbot.on('callback_query', (callbackQuery) => {
+    tgbot.onText(/\/retweeted_other/, async (msg, match) => {
+        let org_msg_id = msg.message_id;
+        let chat_id = msg.chat.id;
+        let from_id = msg.from.id;
+        let retweeted = await UsersDB.getUserSetting(from_id, 'show_other_retweeted');
+        if (!!retweeted) {
+            await UsersDB.setUserSetting(from_id, 'show_other_retweeted', false);
+            return tgbot.sendMessage(chat_id, `disabled forward retweeted by other`, {
+                reply_to_message_id: org_msg_id
+            })
+        } else {
+            await UsersDB.setUserSetting(from_id, 'show_other_retweeted', true);
+            return tgbot.sendMessage(chat_id, `enabled forward rewteeted by other`, {
+                reply_to_message_id: org_msg_id
+            })
+        }
+    });
+
+    tgbot.onText(/\/only_pic/, async (msg, match) => {
+        let org_msg_id = msg.message_id;
+        let chat_id = msg.chat.id;
+        let from_id = msg.from.id;
+        let retweeted = await UsersDB.getUserSetting(from_id, 'show_only_pic_tweet');
+        if (!!retweeted) {
+            await UsersDB.setUserSetting(from_id, 'show_only_pic_tweet', false);
+            return tgbot.sendMessage(chat_id, `disabled only show pic tweets`, {
+                reply_to_message_id: org_msg_id
+            })
+        } else {
+            await UsersDB.setUserSetting(from_id, 'show_only_pic_tweet', true);
+            return tgbot.sendMessage(chat_id, `enabled only show pic tweets`, {
+                reply_to_message_id: org_msg_id
+            })
+        }
+    });
+
+    tgbot.on('callback_query', async (callbackQuery) => {
         const action = callbackQuery.data;
         const msg = callbackQuery.message;
         const opts = {
@@ -190,6 +226,7 @@ tgbot.getMe().then((msg) => {
                 case 'l': {
                     // favorites/create
                     return client.post('favorites/create', {id: args[2]}).then((tweet) => {
+                        tweet = tweet.data;
                         log(`like ${tweet.id}`);
                         return tgbot.editMessageReplyMarkup({
                             inline_keyboard: [
@@ -218,7 +255,19 @@ tgbot.getMe().then((msg) => {
                     })
                 }
                 case 'u': {
+                    if (opts.user_id === tweetFavUserId) {
+                        let tweet = await TweetsDB.getTweet(args[2]);
+                        if (tweet) {
+                            let {msg_ids, tweet_id} = tweet;
+                            for (let msg_id of msg_ids) {
+                                await tgbot.deleteMessage(tgChannelId, msg_id);
+                            }
+                            await TweetsDB.removeTweet(args[2]);
+                            log(`delete tweet ${tweet_id} from channel with msg (${msg_ids})`)
+                        }
+                    }
                     return client.post('favorites/destroy', {id: args[2]}).then((tweet) => {
+                        tweet = tweet.data;
                         log(`unlike ${tweet.id}`);
                         return tgbot.editMessageReplyMarkup({
                             inline_keyboard: [
@@ -249,6 +298,8 @@ tgbot.getMe().then((msg) => {
             }
         }
     });
+
+    _ = loop();
 });
 
 // telegram
@@ -257,9 +308,11 @@ async function loop() {
     let users = await OAuthsDB.getAllUserTokens();
     for (let user of users) {
         let {user_id, userTokens} = user;
+        if (user_id === tweetFavUserId) {
+            _ = tweetFavLoop();
+        }
         await createStreamingClient(user_id, userTokens);
     }
-    _ = tweetFavLoop();
 }
 
 async function createStreamingClient(tg_user_id, tokens) {
@@ -267,45 +320,56 @@ async function createStreamingClient(tg_user_id, tokens) {
         let twitter_options = {
             consumer_key: process.env.TWITTER_CONSUMER_KEY,
             consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
-            access_token_key: tokens.userToken,
+            access_token: tokens.userToken,
             access_token_secret: tokens.userTokenSecret
         };
 
-        if (isLocal) {
-            twitter_options.request_options = {proxy: 'http://127.0.0.1:9090'}
-        }
+        // if (isLocal) {
+        //     twitter_options.request_options = {proxy: 'http://127.0.0.1:9090'}
+        // }
 
         let user = tw_clients[tg_user_id];
         if (!!user) {
             let {stream} = user;
-            stream.destroy();
+            stream.stop();
         }
 
         let client = new Twitter(twitter_options);
 
-        let stream = client.stream('user', {with: 'followings'});
+        let stream = client.stream('user', {with: 'followings', stringify_friend_ids: true});
 
-        stream.on('data', async (tweet) => {
-            let tweet_id = tweet.id_str;
-            let user_name = tweet.user.name;
-            let user_tid = tweet.user.screen_name;
-            let user_show_retweeted = await UsersDB.getUserSetting(tg_user_id, 'show_retweeted');
-            let is_retweeted = !!tweet.retweeted_status &&
-                (
-                    tweet.retweeted_status.user.id !== tweet.user.id ||
-                    (
-                        tweet.retweeted_status.user.id === tweet.user.id && !user_show_retweeted
-                    )
-                );
-            let is_reply = tweet.in_reply_to_screen_name !== null;
-            let text = tweet.text;
-            let favorited = tweet.favorited;
-            let medias = tweet.entities.media;
-            let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
-            let pics = [];
-            if (!is_retweeted && !is_reply && medias) {
-                log(`${user_name}(@${user_tid})\n${text}`);
+        stream.on('tweet', async (tweet) => {
+            let user_show_self_retweeted = await UsersDB.getUserSetting(tg_user_id, 'show_self_retweeted', false);
+            let user_show_other_retweeted = await UsersDB.getUserSetting(tg_user_id, 'show_other_retweeted', false);
+            let user_show_only_pic_tweet = await UsersDB.getUserSetting(tg_user_id, 'show_only_pic_tweet', true);
 
+            let {
+                id_str: tweet_id, user, retweeted_status: retweeted,
+                in_reply_to_screen_name: is_reply, text, favorited, entities,
+                extended_entities
+            } = tweet;
+            let {name: user_name, screen_name: user_tid} = user;
+            let is_retweeted = !!retweeted;
+            let show_retweetd = is_retweeted;
+            if (is_retweeted) {
+                if (retweeted.user.id !== user.id) {
+                    show_retweetd = show_retweetd && !user_show_other_retweeted
+                } else {
+                    show_retweetd = show_retweetd && !user_show_self_retweeted
+                }
+            }
+            is_reply = is_reply !== null;
+            let {media: medias} = entities;
+            let ext_medias = !!extended_entities && extended_entities.media;
+            let pics = [], org_user_name, org_tweet_id, org_user_tid;
+            log(`${user_name}(@${user_tid})\n${text}\n`);
+            if (!show_retweetd && !is_reply && (!user_show_only_pic_tweet || medias)) {
+                if (is_retweeted) {
+                    let {id_str, user} = retweeted;
+                    org_user_name = user.name;
+                    org_tweet_id = id_str;
+                    org_user_tid = user.screen_name;
+                }
                 let msg_id = -1;
                 if (medias && medias.length > 0) {
                     medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
@@ -318,9 +382,12 @@ async function createStreamingClient(tg_user_id, tokens) {
                         if (msg_id !== -1) {
                             options.reply_to_message_id = msg_id;
                         }
-                        await tgbot.sendPhoto(tg_user_id, request(pic), {
-                            caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
-                        }).then((msg) => msg_id = msg.message_id).catch((err) => {
+                        let caption = `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`;
+                        if (is_retweeted) {
+                            caption = `${org_user_name}(#${org_user_tid})\nhttps://twitter.com/${org_user_tid}/status/${org_tweet_id}\nRT ${user_name}(#${user_tid})`
+                        }
+                        options.caption = caption;
+                        await tgbot.sendPhoto(tg_user_id, request(pic), options).then((msg) => msg_id = msg.message_id).catch((err) => {
                             console.error(err)
                         })
                     }
@@ -333,22 +400,24 @@ async function createStreamingClient(tg_user_id, tokens) {
                 if (!text.includes('https://t.co/')) {
                     options.disable_web_page_preview = true;
                 }
-                let tw_id = is_retweeted ? tweet.retweeted_status.id_str : tweet.id_str;
-                if (!favorited) {
-                    options.reply_markup = {
-                        inline_keyboard: [
-                            [
-                                {text: '❤️ 收藏', callback_data: `l�${tg_user_id}�${tw_id}`},
+                if (medias && medias.length > 0) {
+                    let tw_id = is_retweeted ? tweet.retweeted_status.id_str : tweet.id_str;
+                    if (!favorited) {
+                        options.reply_markup = {
+                            inline_keyboard: [
+                                [
+                                    {text: '❤️ 收藏', callback_data: `l�${tg_user_id}�${tw_id}`},
+                                ]
                             ]
-                        ]
-                    }
-                } else {
-                    options.reply_markup = {
-                        inline_keyboard: [
-                            [
-                                {text: '❤️ 已收藏', callback_data: `u�${tg_user_id}�${tw_id}`},
+                        }
+                    } else {
+                        options.reply_markup = {
+                            inline_keyboard: [
+                                [
+                                    {text: '❤️ 已收藏', callback_data: `u�${tg_user_id}�${tw_id}`},
+                                ]
                             ]
-                        ]
+                        }
                     }
                 }
                 await tgbot.sendMessage(tg_user_id, `${text}\n\n${user_name}(<a href="https://twitter.com/${user_tid}">@${user_tid}</a>)\n<a href="https://twitter.com/${user_tid}/status/${tweet_id}">${tweet_id}</a>`, options).catch((err) => {
@@ -356,6 +425,17 @@ async function createStreamingClient(tg_user_id, tokens) {
                 })
             }
         });
+
+        // capture favorite tweet
+        if (tg_user_id === tweetFavUserId) {
+            stream.on('favorite', async (event) => {
+                let {event: event_type, target_object} = event;
+                debug(JSON.stringify(target_object));
+                if (event_type === 'favorite') {
+                    _ = _sendTweetToChannel(target_object);
+                }
+            });
+        }
 
         stream.on('error', (error) => {
             console.error(error);
@@ -368,8 +448,6 @@ async function createStreamingClient(tg_user_id, tokens) {
         console.error(err);
     }
 }
-
-let _ = loop();
 
 process.on('unhandledRejection', (reason) => {
     console.error(reason);
@@ -392,7 +470,7 @@ require('heroku-self-ping')(URL, {interval: 25 * 60 * 1000});
 // });
 
 // twitter fav
-let tweetFavUserId = process.env.TG_USER_ID || -1;
+let tweetFavUserId = parseInt(process.env.TG_USER_ID) || -1;
 let tgChannelId = process.env.TG_CHANNEL_ID || '';
 if (!tgChannelId.startsWith('@')) {
     tgChannelId = '@' + tgChannelId;
@@ -412,47 +490,7 @@ const tweetFavLoop = async function () {
                 }
                 let tweets = await client.get('favorites/list', options);
                 for (let tweet of tweets) {
-                    let tweet_id = tweet.id_str;
-                    let user_name = tweet.user.name;
-                    let user_tid = tweet.user.screen_name;
-                    let medias = tweet.entities.media;
-                    let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
-                    let pics = [];
-                    let msg_ids = [];
-                    let has_tweet = await TweetsDB.hasTweet(tweet_id);
-                    if (!has_tweet) {
-                        if (medias && medias.length > 0) {
-                            log(`fetch https://twitter.com/${user_tid}/status/${tweet_id}`);
-                            medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https + ':large'));
-                            if (ext_medias) {
-                                pics.length = 0;
-                                ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https + ':large'));
-                            }
-                        } else {
-                            let body = await requestPromise(`https://twitter.com/${user_tid}/status/${tweet_id}`);
-                            if (body) {
-                                let $ = cheerio.load(body);
-                                let photos = $('div.AdaptiveMedia-photoContainer');
-                                photos.map((i) => pics.push(photos.eq(i).attr('data-image-url') + ':large'));
-                            }
-                        }
-                        if (pics.length > 0) {
-                            for (let pic of pics) {
-                                await tgbot.sendPhoto(tgChannelId, request(pic), {
-                                    caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
-                                }).then((msg) => {
-                                    msg_ids.push(msg.message_id)
-                                }).catch((err) => {
-                                    console.error(err)
-                                })
-                            }
-                            await TweetsDB.addTweet(tweet_id, msg_ids)
-                        } else {
-                            log(`[nomedia] https://twitter.com/${user_tid}/status/${tweet_id}`);
-                        }
-                    } else {
-                        log(`[exists] https://twitter.com/${user_tid}/status/${tweet_id}`);
-                    }
+                    _ = _sendTweetToChannel(tweet);
                     last_tweet_id = tweet_id;
                 }
 
@@ -469,5 +507,50 @@ const tweetFavLoop = async function () {
         _ = request_tweets(client, -1);
     }
 };
-setInterval(tweetFavLoop, 60 * 60 * 1000); // 1 hours
+
+async function _sendTweetToChannel(tweet) {
+    let tweet_id = tweet.id_str;
+    let user_name = tweet.user.name;
+    let user_tid = tweet.user.screen_name;
+    let medias = tweet.entities.media;
+    let ext_medias = !!tweet.extended_entities && tweet.extended_entities.media;
+    let pics = [];
+    let msg_ids = [];
+    let has_tweet = await TweetsDB.hasTweet(tweet_id);
+    if (!has_tweet) {
+        if (medias && medias.length > 0) {
+            log(`fetch https://twitter.com/${user_tid}/status/${tweet_id}`);
+            medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https + ':large'));
+            if (ext_medias) {
+                pics.length = 0;
+                ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https + ':large'));
+            }
+        } else {
+            let body = await requestPromise(`https://twitter.com/${user_tid}/status/${tweet_id}`);
+            if (body) {
+                let $ = cheerio.load(body);
+                let photos = $('div.AdaptiveMedia-photoContainer');
+                photos.map((i) => pics.push(photos.eq(i).attr('data-image-url') + ':large'));
+            }
+        }
+        if (pics.length > 0) {
+            for (let pic of pics) {
+                await tgbot.sendPhoto(tgChannelId, request(pic), {
+                    caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
+                }).then((msg) => {
+                    msg_ids.push(msg.message_id)
+                }).catch((err) => {
+                    console.error(err)
+                })
+            }
+            await TweetsDB.addTweet(tweet_id, msg_ids)
+        } else {
+            log(`[nomedia] https://twitter.com/${user_tid}/status/${tweet_id}`);
+        }
+    } else {
+        log(`[exists] https://twitter.com/${user_tid}/status/${tweet_id}`);
+    }
+}
+
+// setInterval(tweetFavLoop, 60 * 60 * 1000); // 1 hours
 // twitter fav
