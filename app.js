@@ -226,21 +226,25 @@ tgbot.getMe().then((msg) => {
                 case 'l': {
                     // favorites/create
                     return client.post('favorites/create', {id: args[2]}).then((tweet) => {
-                        tweet = tweet.data;
-                        log(`like ${tweet.id}`);
-                        return tgbot.editMessageReplyMarkup({
-                            inline_keyboard: [
-                                [
-                                    {text: '❤️ 已收藏', callback_data: `u�${args[1]}�${args[2]}`},
-                                ]
-                            ]
-                        }, {
-                            chat_id: opts.chat_id,
-                            message_id: opts.msg_id
-                        });
-                    }).catch((err) => {
-                        console.error(err);
-                        if (err[0] && err[0].code === 139) {
+                        let {data} = tweet;
+                        if (data.errors && data.errors.length > 0) {
+                            let err = data.errors;
+                            console.error(err);
+                            if (err[0] && err[0].code === 139) {
+                                return tgbot.editMessageReplyMarkup({
+                                    inline_keyboard: [
+                                        [
+                                            {text: '❤️ 已收藏', callback_data: `u�${args[1]}�${args[2]}`},
+                                        ]
+                                    ]
+                                }, {
+                                    chat_id: opts.chat_id,
+                                    message_id: opts.msg_id
+                                });
+                            }
+                        } else {
+                            tweet = data;
+                            log(`like ${tweet.id}`);
                             return tgbot.editMessageReplyMarkup({
                                 inline_keyboard: [
                                     [
@@ -267,21 +271,25 @@ tgbot.getMe().then((msg) => {
                         }
                     }
                     return client.post('favorites/destroy', {id: args[2]}).then((tweet) => {
-                        tweet = tweet.data;
-                        log(`unlike ${tweet.id}`);
-                        return tgbot.editMessageReplyMarkup({
-                            inline_keyboard: [
-                                [
-                                    {text: '❤️ 收藏', callback_data: `l�${args[1]}�${args[2]}`},
-                                ]
-                            ]
-                        }, {
-                            chat_id: opts.chat_id,
-                            message_id: opts.msg_id
-                        });
-                    }).catch((err) => {
-                        console.error(err);
-                        if (err[0] && err[0].code === 144) {
+                        let {data} = tweet;
+                        if (data.errors && data.errors.length > 0) {
+                            let err = data.errors;
+                            console.error(err);
+                            if (err[0] && err[0].code === 144) {
+                                return tgbot.editMessageReplyMarkup({
+                                    inline_keyboard: [
+                                        [
+                                            {text: '❤️ 收藏', callback_data: `l�${args[1]}�${args[2]}`},
+                                        ]
+                                    ]
+                                }, {
+                                    chat_id: opts.chat_id,
+                                    message_id: opts.msg_id
+                                });
+                            }
+                        } else {
+                            tweet = data;
+                            log(`unlike ${tweet.id}`);
                             return tgbot.editMessageReplyMarkup({
                                 inline_keyboard: [
                                     [
@@ -298,7 +306,6 @@ tgbot.getMe().then((msg) => {
             }
         }
     });
-
     _ = loop();
 });
 
@@ -308,11 +315,9 @@ async function loop() {
     let users = await OAuthsDB.getAllUserTokens();
     for (let user of users) {
         let {user_id, userTokens} = user;
-        if (user_id === tweetFavUserId) {
-            _ = tweetFavLoop();
-        }
         await createStreamingClient(user_id, userTokens);
     }
+    _ = tweetFavLoop();
 }
 
 async function createStreamingClient(tg_user_id, tokens) {
@@ -435,6 +440,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                     _ = _sendTweetToChannel(target_object);
                 }
             });
+
         }
 
         stream.on('error', (error) => {
@@ -489,12 +495,11 @@ const tweetFavLoop = async function () {
                     options.max_id = last
                 }
                 let tweets = await client.get('favorites/list', options);
-                for (let tweet of tweets) {
-                    _ = _sendTweetToChannel(tweet);
-                    last_tweet_id = tweet_id;
+                let {data} = tweets;
+                for (let tweet of data) {
+                    last_tweet_id = await _sendTweetToChannel(tweet);
                 }
-
-                if (last_tweet_id !== -1 && tweets.length !== 1) {
+                if (last_tweet_id !== -1 && data.length !== 1) {
                     _ = request_tweets(client, last_tweet_id);
                 } else {
                     log("fetch over")
@@ -550,6 +555,7 @@ async function _sendTweetToChannel(tweet) {
     } else {
         log(`[exists] https://twitter.com/${user_tid}/status/${tweet_id}`);
     }
+    return tweet_id;
 }
 
 // setInterval(tweetFavLoop, 60 * 60 * 1000); // 1 hours
