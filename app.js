@@ -259,17 +259,6 @@ tgbot.getMe().then((msg) => {
                     })
                 }
                 case 'u': {
-                    if (opts.user_id === tweetFavUserId) {
-                        let tweet = await TweetsDB.getTweet(args[2]);
-                        if (tweet) {
-                            let {msg_ids, tweet_id} = tweet;
-                            for (let msg_id of msg_ids) {
-                                await tgbot.deleteMessage(tgChannelId, msg_id);
-                            }
-                            await TweetsDB.removeTweet(args[2]);
-                            log(`delete tweet ${tweet_id} from channel with msg (${msg_ids})`)
-                        }
-                    }
                     return client.post('favorites/destroy', {id: args[2]}).then((tweet) => {
                         let {data} = tweet;
                         if (data.errors && data.errors.length > 0) {
@@ -440,7 +429,24 @@ async function createStreamingClient(tg_user_id, tokens) {
                     _ = _sendTweetToChannel(target_object);
                 }
             });
-
+            stream.on('unfavorite', async (event) => {
+                let {event: event_type, target_object} = event;
+                debug(JSON.stringify(target_object));
+                if (event_type === 'unfavorite') {
+                    let {id_str} = target_object;
+                    let tweet = await TweetsDB.getTweet(id_str);
+                    if (tweet) {
+                        let {msg_ids, tweet_id} = tweet;
+                        for (let msg_id of msg_ids) {
+                            await tgbot.deleteMessage(tgChannelId, msg_id).catch((err) => console.error(err));
+                        }
+                        await TweetsDB.removeTweet(id_str);
+                        log(`delete tweet ${tweet_id} from channel with msg (${msg_ids})`)
+                    } else {
+                        log(`delete not found`)
+                    }
+                }
+            })
         }
 
         stream.on('error', (error) => {
@@ -460,7 +466,7 @@ process.on('unhandledRejection', (reason) => {
     // process.exit(1);
 });
 
-require('heroku-self-ping')(URL, {interval: 25 * 60 * 1000});
+// require('heroku-self-ping')(URL, {interval: 25 * 60 * 1000});
 
 // let herokuApiToken = process.env.HEROKU_API_TOKEN;
 // let herokuAppName = process.env.HEROKU_APP_NAME;
