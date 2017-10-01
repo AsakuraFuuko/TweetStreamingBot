@@ -259,11 +259,22 @@ tgbot.getMe().then((msg) => {
                     })
                 }
                 case 'u': {
-                    return client.post('favorites/destroy', {id: args[2]}).then((tweet) => {
+                    return client.post('favorites/destroy', {id: args[2]}).then(async (tweet) => {
                         let {data} = tweet;
                         if (data.errors && data.errors.length > 0) {
                             let err = data.errors;
                             console.error(err);
+                            if (opts.user_id === tweetFavUserId) {
+                                let tweet = await TweetsDB.getTweet(args[2]);
+                                if (tweet) {
+                                    let {msg_ids, tweet_id} = tweet;
+                                    for (let msg_id of msg_ids) {
+                                        await tgbot.deleteMessage(tgChannelId, msg_id);
+                                    }
+                                    await TweetsDB.removeTweet(args[2]);
+                                    log(`delete tweet ${tweet_id} from channel with msg (${msg_ids})`)
+                                }
+                            }
                             if (err[0] && err[0].code === 144) {
                                 return tgbot.editMessageReplyMarkup({
                                     inline_keyboard: [
