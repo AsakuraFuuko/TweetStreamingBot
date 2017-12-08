@@ -1,4 +1,5 @@
 'use strict';
+require('longjohn');
 const debug = require('debug')('twitterstreamingbot');
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
