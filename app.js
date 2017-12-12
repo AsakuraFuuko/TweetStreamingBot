@@ -558,15 +558,24 @@ async function _sendTweetToChannel(tweet) {
         }
         if (pics.length > 0) {
             for (let pic of pics) {
-                await tgbot.sendPhoto(tgChannelId, request(pic), {
-                    caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
-                }).then((msg) => {
-                    msg_ids.push(msg.message_id)
-                }).catch((err) => {
-                    console.error(err)
-                })
+                if (!await tgbot.sendPhoto(tgChannelId, request(pic), {
+                        caption: `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`
+                    }).then((msg) => {
+                        msg_ids.push(msg.message_id);
+                        return true
+                    }).catch(async (err) => {
+                        console.error(err);
+                        for (let msg_id of msg_ids) {
+                            await tgbot.deleteMessage(tgChannelId, msg_id).catch((err) => console.error(err));
+                        }
+                        return false
+                    })) {
+                    break
+                }
             }
-            await TweetsDB.addTweet(tweet_id, msg_ids)
+            if (msg_ids.length > 0) {
+                await TweetsDB.addTweet(tweet_id, msg_ids)
+            }
         } else {
             log(`[nomedia] https://twitter.com/${user_tid}/status/${tweet_id}`);
         }
