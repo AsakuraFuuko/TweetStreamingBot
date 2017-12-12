@@ -473,10 +473,10 @@ async function createStreamingClient(tg_user_id, tokens) {
     }
 }
 
-process.on('unhandledRejection', (reason) => {
-    console.error(reason);
-    // process.exit(1);
-});
+// process.on('unhandledRejection', (reason) => {
+//     console.error(reason);
+//     // process.exit(1);
+// });
 
 // require('heroku-self-ping')(URL, {interval: 25 * 60 * 1000});
 

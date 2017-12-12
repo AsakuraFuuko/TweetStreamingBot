@@ -36,6 +36,7 @@
     "nedb": "^1.8.0",
     "node-crontab": "0.0.8",
     "node-telegram-bot-api": "github:yagop/node-telegram-bot-api#master",
+    "raven": "^2.3.0",
     "request": "^2.81.0",
     "request-promise": "^4.2.1",
     "request-promise-native": "^1.0.4",
