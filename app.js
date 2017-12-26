@@ -383,19 +383,32 @@ async function createStreamingClient(tg_user_id, tokens) {
                         pics.length = 0;
                         ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
                     }
-                    for (let pic of pics) {
-                        let options = {};
-                        if (msg_id !== -1) {
-                            options.reply_to_message_id = msg_id;
-                        }
-                        let caption = `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`;
-                        if (is_retweeted) {
-                            caption = `${org_user_name}(#${org_user_tid})\nhttps://twitter.com/${org_user_tid}/status/${org_tweet_id}\nRT ${user_name}(#${user_tid})`
-                        }
-                        options.caption = caption;
-                        await tgbot.sendPhoto(tg_user_id, request(pic), options).then((msg) => msg_id = msg.message_id).catch((err) => {
+                    if (pics.length > 2) {
+                        pics = pics.map(pic => {
+                            let caption = `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`;
+                            if (is_retweeted) {
+                                caption = `${org_user_name}(#${org_user_tid})\nhttps://twitter.com/${org_user_tid}/status/${org_tweet_id}\nRT ${user_name}(#${user_tid})`
+                            }
+                            return {type: 'photo', media: pic, caption}
+                        });
+                        await tgbot.sendMediaGroup(tg_user_id, pics).then((msg) => msg_id = msg.message_id).catch((err) => {
                             console.error(err)
                         })
+                    } else {
+                        for (let pic of pics) {
+                            let options = {};
+                            if (msg_id !== -1) {
+                                options.reply_to_message_id = msg_id;
+                            }
+                            let caption = `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`;
+                            if (is_retweeted) {
+                                caption = `${org_user_name}(#${org_user_tid})\nhttps://twitter.com/${org_user_tid}/status/${org_tweet_id}\nRT ${user_name}(#${user_tid})`
+                            }
+                            options.caption = caption;
+                            await tgbot.sendPhoto(tg_user_id, request(pic), options).then((msg) => msg_id = msg.message_id).catch((err) => {
+                                console.error(err)
+                            })
+                        }
                     }
                 }
 
