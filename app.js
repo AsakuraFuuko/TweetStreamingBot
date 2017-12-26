@@ -383,7 +383,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                         pics.length = 0;
                         ext_medias.filter((media) => media.type === 'photo').map((media) => pics.push(media.media_url_https));
                     }
-                    if (pics.length > 2) {
+                    if (pics.length >= 2) {
                         pics = pics.map(pic => {
                             let caption = `${user_name}(#${user_tid})\nhttps://twitter.com/${user_tid}/status/${tweet_id}`;
                             if (is_retweeted) {
