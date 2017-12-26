@@ -389,7 +389,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                             if (is_retweeted) {
                                 caption = `${org_user_name}(#${org_user_tid})\nhttps://twitter.com/${org_user_tid}/status/${org_tweet_id}\nRT ${user_name}(#${user_tid})`
                             }
-                            return {type: 'photo', media: pic, caption}
+                            return {type: 'photo', media: request(pic), caption}
                         });
                         await tgbot.sendMediaGroup(tg_user_id, pics).then((msg) => msg_id = msg.message_id).catch((err) => {
                             console.error(err)
