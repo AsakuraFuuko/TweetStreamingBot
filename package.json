@@ -35,7 +35,7 @@
     "mongodb-promises": "^0.2.0",
     "nedb": "^1.8.0",
     "node-crontab": "0.0.8",
-    "node-telegram-bot-api": "github:yagop/node-telegram-bot-api#master",
+    "node-telegram-bot-api": "^0.30.0",
     "raven": "^2.3.0",
     "request": "^2.83.0",
     "request-promise": "^4.2.2",

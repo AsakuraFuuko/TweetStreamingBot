@@ -62,5 +62,4 @@ typings/
 *.iml
 config.yaml
 config.json
-package-lock.json
 members.json
