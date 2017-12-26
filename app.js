@@ -391,7 +391,7 @@ async function createStreamingClient(tg_user_id, tokens) {
                             }
                             return {type: 'photo', media: request(pic), caption}
                         });
-                        await tgbot.sendMediaGroup(tg_user_id, pics).then((msg) => msg_id = msg.message_id).catch((err) => {
+                        await tgbot.sendMediaGroup(tg_user_id, pics).then((msg) => msg_id = msg.pop().message_id).catch((err) => {
                             console.error(err)
                         })
                     } else {
